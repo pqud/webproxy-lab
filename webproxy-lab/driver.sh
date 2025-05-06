@@ -51,7 +51,6 @@ FETCH_FILE="home.html"
 function download_proxy {
     cd $1
     curl --max-time ${TIMEOUT} --silent --proxy $4 --output $2 $3
-
     (( $? == 28 )) && echo "Error: Fetch timed out after ${TIMEOUT} seconds"
     cd $HOME_DIR
 }
@@ -407,3 +406,4 @@ maxScore=`expr ${MAX_BASIC} + ${MAX_CACHE} + ${MAX_CONCURRENCY}`
 echo ""
 echo "totalScore: ${totalScore}/${maxScore}"
 exit
+

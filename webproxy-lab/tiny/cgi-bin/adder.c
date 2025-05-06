@@ -21,6 +21,7 @@ int main(void)
     n2 = atoi(strchr(arg2, '=') + 1);
   }
 
+  
   /* Make the response body */
   sprintf(content, "QUERY_STRING=%s\r\n<p>", buf);
   sprintf(content + strlen(content), "Welcome to add.com: ");
