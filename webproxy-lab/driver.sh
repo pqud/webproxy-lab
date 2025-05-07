@@ -221,7 +221,8 @@ wait_for_port_use "${tiny_port}"
 # Run the proxy
 proxy_port=$(free_port)
 echo "Starting proxy on ${proxy_port}"
-./proxy ${proxy_port}  &> /dev/null &
+# ./proxy ${proxy_port}  &> /dev/null &
+./proxy ${proxy_port}  &
 proxy_pid=$!
 
 # Wait for the proxy to start in earnest

@@ -3,6 +3,8 @@
         "cache.h": "c",
         "pthread.h": "c",
         "strings.h": "c",
-        "csapp.h": "c"
+        "csapp.h": "c",
+        "stdio.h": "c",
+        "time.h": "c"
     }
 }
