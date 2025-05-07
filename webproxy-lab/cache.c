@@ -97,7 +97,7 @@ void write_cache(char *uri, const char* data, int size ){
         CacheNode *victim = cache_list.head;
         CacheNode *curr = cache_list.head;
         while (curr) {
-            if (curr->refer < victim->refer)
+            if (curr->refer > victim->refer)
                 victim = curr;
             curr = curr->next;
         }
