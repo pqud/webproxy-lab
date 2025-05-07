@@ -23,7 +23,6 @@ typedef struct _CacheList{
     size_t total_size; //전체 캐시 사용량
     size_t capacity; //최대 캐시 용량
     pthread_rwlock_t lock; //보호용 락 
-    HashTable *uri_map;
 }CacheList;
 
 void init_cache();
