@@ -1,6 +1,10 @@
 #include <stdio.h>
 #include "csapp.h"
 #include "cache.h"
+#include <time.h>
+
+clock_t start,end;
+double elapsed;
 
 /* Recommended max cache and object sizes */
 #define MAX_CACHE_SIZE 1049000
@@ -18,6 +22,7 @@ void read_requesthdrs(rio_t *rp, char *host_header, char *other_header);
 void parse_uri(char *uri, char *hostname, char *port, char *path);
 void clienterror(int fd, char *cause, char *errnum, char *shortmsg, char *longmsg);
 void handle_client(int clientfd);
+void sigint_handler(int sig);
 
 
 /* You won't lose style points for including this long line in your code */
@@ -35,6 +40,7 @@ void flush_gprof() {
 int main(int argc, char **argv)
 {
   atexit(flush_gprof);
+  start=clock();
   int listenfd, connfd;
   char hostname[MAXLINE], port[MAXLINE];
   socklen_t clientlen;
@@ -49,6 +55,7 @@ int main(int argc, char **argv)
 
   listenfd = Open_listenfd(argv[1]); //듣기 소켓 오픈!
   init_cache();
+  signal(SIGINT, sigint_handler); // 시그널 핸들러는 가능한 빨리
   while (1) //무한 서버 루프 실행 
   {
     int* connfd_p = Malloc(sizeof(int));
@@ -236,4 +243,13 @@ void *thread(void *vargp){
   handle_client(connfd);
   Close(connfd);
   return NULL;
+}
+
+void sigint_handler(int sig) {
+  deinit_cache();
+  end = clock();
+  elapsed = (double)(end - start) / CLOCKS_PER_SEC;
+  printf("전체 실행 시간: %f 초\n", elapsed);
+  fflush(stdout);  // <- 추가!
+  exit(0);
 }

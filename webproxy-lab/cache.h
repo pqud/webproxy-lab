@@ -25,7 +25,10 @@ typedef struct _CacheList{
     pthread_rwlock_t lock; //보호용 락 
 }CacheList;
 
+
+void debug_print_cache();
 void init_cache();
+void deinit_cache();
 int find_cache(char *uri, char* data_buf, int *size_buf);
 void read_cache(CacheNode *cache);
 void write_cache(char *uri, const char* data, int size);

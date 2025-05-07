@@ -11,6 +11,27 @@ void init_cache(){
     pthread_rwlock_init(&cache_list.lock, NULL);
 }
 
+void deinit_cache(){
+    pthread_rwlock_wrlock(&cache_list);
+
+    CacheNode* temp = cache_list.head;
+    while(temp){        
+        CacheNode *next= temp->next;
+        free(temp->data);
+        free(temp);
+        temp=next;
+    }
+
+    cache_list.head=NULL;
+    cache_list.tail=NULL;
+    cache_list.total_size=0;
+
+    pthread_rwlock_unlock(&cache_list.lock);
+    pthread_rwlock_destroy(&cache_list.lock);
+
+    Free(&cache_list);
+
+}
 
 int find_cache(char *uri, char* data_buf, int *size_buf ){
     if (cache_list.head == NULL || uri == NULL) return 0;
@@ -116,4 +137,20 @@ void write_cache(char *uri, const char* data, int size ){
     pthread_rwlock_unlock(&cache_list.lock); 
 
 
+}
+
+void debug_print_cache() {
+    pthread_rwlock_rdlock(&cache_list.lock);
+
+    printf("====== Cache Current State ======\n");
+    printf("Total cached bytes: %zu\n", cache_list.total_size);
+
+    CacheNode* curr = cache_list.head;
+    while (curr != NULL) {
+        printf("URI: %-60s | Size: %ld bytes\n", curr->uri, curr->size);
+        curr = curr->next;
+    }
+    printf("========== End of Cache =========\n");
+
+    pthread_rwlock_unlock(&cache_list.lock);
 }
