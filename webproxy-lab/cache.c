@@ -8,6 +8,8 @@ void init_cache(){
     cache_list.tail=NULL;
     cache_list.total_size=0;
     cache_list.capacity=MAX_CACHE_SIZE;
+    cache_list.hit_rate=0;
+    cache_list.request_count=0;
     memset(cache_list.table, 0, sizeof(cache_list.table)); //해당 포인터에서 sizeof(cache_list.table)만큼을 0으로 초기화.
     pthread_rwlock_init(&cache_list.lock, NULL);
 }
@@ -43,7 +45,9 @@ int find_cache(char *uri, char* data_buf, int *size_buf ){
 
     CacheNode *temp= cache_lookup(uri, 0,0);
 
+    atomic_fetch_add_explicit(&cache_list.request_count, 1, memory_order_relaxed);
     if(temp){
+        atomic_fetch_add_explicit(&cache_list.hit_rate, 1, memory_order_relaxed);
         memcpy(data_buf, temp->data, temp->size);
         *size_buf=temp->size;
         pthread_rwlock_unlock(&cache_list.lock);
@@ -219,6 +223,8 @@ void debug_print_cache() {
         printf("URI: %-60s | Size: %ld bytes\n", curr->uri, curr->size);
         curr = curr->next;
     }
+    printf("캐시 히트율: %.2f%%\n", 100.0 * cache_list.hit_rate / cache_list.request_count);
+
     printf("========== End of Cache =========\n");
 
     pthread_rwlock_unlock(&cache_list.lock);

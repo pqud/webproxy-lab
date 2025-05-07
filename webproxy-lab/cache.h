@@ -2,6 +2,7 @@
 #include <stdlib.h>
 #include <strings.h>
 #include <pthread.h>
+#include <stdatomic.h>
 #include "csapp.h"
 
 /* Recommended max cache and object sizes */
@@ -27,6 +28,8 @@ typedef struct _CacheList{
     CacheNode *head; //가장 최근에 사용된 노드
     CacheNode *tail; //가장 마지막으로 사용한 노드
     CacheNode *table[HASH_SIZE]; //해시 버킷
+    atomic_int hit_rate;
+    atomic_int request_count ;
 
     size_t total_size; //전체 캐시 사용량
     size_t capacity; //최대 캐시 용량

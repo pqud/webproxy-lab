@@ -239,6 +239,7 @@ void *thread(void *vargp){
   pthread_detach(pthread_self()); // join 필요 없음
   handle_client(connfd);
   Close(connfd);
+  debug_print_cache();
   return NULL;
 }
 
