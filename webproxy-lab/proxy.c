@@ -1,10 +1,7 @@
 #include <stdio.h>
 #include "csapp.h"
 #include "cache.h"
-#include <time.h>
 
-clock_t start,end;
-double elapsed;
 
 /* Recommended max cache and object sizes */
 #define MAX_CACHE_SIZE 1049000
@@ -40,7 +37,6 @@ void flush_gprof() {
 int main(int argc, char **argv)
 {
   atexit(flush_gprof);
-  start=clock();
   int listenfd, connfd;
   char hostname[MAXLINE], port[MAXLINE];
   socklen_t clientlen;
@@ -249,9 +245,5 @@ void *thread(void *vargp){
 
 void sigint_handler(int sig) {
   deinit_cache();
-  end = clock();
-  elapsed = (double)(end - start) / CLOCKS_PER_SEC;
-  printf("전체 실행 시간: %f 초\n", elapsed);
-  fflush(stdout);  // <- 추가!
   exit(0);
 }
