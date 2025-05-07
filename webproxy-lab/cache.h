@@ -26,9 +26,9 @@ typedef struct _CacheList{
 }CacheList;
 
 
-void debug_print_cache();
 void init_cache();
 void deinit_cache();
 int find_cache(char *uri, char* data_buf, int *size_buf);
 void read_cache(CacheNode *cache);
 void write_cache(char *uri, const char* data, int size);
+void debug_print_cache();
