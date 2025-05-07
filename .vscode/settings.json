@@ -1,0 +1,8 @@
+{
+    "files.associations": {
+        "cache.h": "c",
+        "pthread.h": "c",
+        "strings.h": "c",
+        "csapp.h": "c"
+    }
+}

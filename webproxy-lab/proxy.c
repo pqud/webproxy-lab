@@ -1,5 +1,6 @@
 #include <stdio.h>
 #include "csapp.h"
+#include "cache.h"
 
 /* Recommended max cache and object sizes */
 #define MAX_CACHE_SIZE 1049000
@@ -13,12 +14,11 @@ int is_local_test = 0;
 
 void *thread(void *vargp);
 void format_http_header(rio_t *client_rio, char *path, char *hostname, char *other_header);
-void receive_pass(int clientfd, int serverfd, rio_t *rio_ser);
-void Send(int fd);
 void read_requesthdrs(rio_t *rp, char *host_header, char *other_header);
 void parse_uri(char *uri, char *hostname, char *port, char *path);
 void clienterror(int fd, char *cause, char *errnum, char *shortmsg, char *longmsg);
 void handle_client(int clientfd);
+
 
 /* You won't lose style points for including this long line in your code */
 static const char *user_agent_hdr =
@@ -26,8 +26,15 @@ static const char *user_agent_hdr =
     "Firefox/10.0.3\r\n";
 
 
+void flush_gprof() {
+  // gprof용 gmon.out flush 보장
+  printf("[INFO] Flushing gprof output...\n");
+  _exit(0); // _exit으로 명확한 종료
+}
+
 int main(int argc, char **argv)
 {
+  atexit(flush_gprof);
   int listenfd, connfd;
   char hostname[MAXLINE], port[MAXLINE];
   socklen_t clientlen;
@@ -41,6 +48,7 @@ int main(int argc, char **argv)
   }
 
   listenfd = Open_listenfd(argv[1]); //듣기 소켓 오픈!
+  init_cache();
   while (1) //무한 서버 루프 실행 
   {
     int* connfd_p = Malloc(sizeof(int));
@@ -62,7 +70,7 @@ void handle_client(int clientfd){
   int flag;
   int serverfd;
 
-  //1. 요청 라인 읽기 
+  //1. 요청 라인 읽기
   Rio_readinitb(&client_rio, clientfd);
   Rio_readlineb(&client_rio, buf, MAXLINE);
   printf("Request headers: \n");
@@ -73,6 +81,7 @@ void handle_client(int clientfd){
   if(strcasecmp(method, "GET") != 0 && strcasecmp(method, "HEAD") != 0){ //strcasecmp는 두 함수가 동일하면 리턴 0, 다르면 1이다.
     clienterror(clientfd, method, "501", "Not implemented",
     "Tiny dose not implement this method");
+    close(clientfd);
     return;
   }
 
@@ -81,25 +90,42 @@ void handle_client(int clientfd){
 
   //3. 헤더 읽고
   read_requesthdrs(&client_rio, host_header, other_header); // read HTTP request headers
-  // HTTP 1.1->HTTP 1.0으로 변경 
+  // HTTP 1.1->HTTP 1.0으로 변경
   format_http_header(request_buf, path, hostname, other_header);
 
-  //4. 서버 연결 
+  // NEW! : 캐시 조회
+  char cache_buf[MAX_OBJECT_SIZE];
+  int cache_size;
+  if (find_cache(uri, cache_buf, &cache_size)) {
+    Rio_writen(clientfd, cache_buf, cache_size);
+    Close(clientfd);
+    return;
+  }
+
+
+  //4. 서버 연결
   serverfd = Open_clientfd(hostname, port);
+  if(serverfd<0) return;
 
   //5. 서버로 요청 전송
   Rio_writen(serverfd, request_buf, strlen(request_buf));
 
-  //6. 응답 수신+ 클라이언트 전달
-  Rio_readinitb(&server_rio, serverfd);
+  //6. 응답 수신+ 클라이언트 전달 + 캐시 누적
+  char data_buf[MAX_OBJECT_SIZE];
+  int total_size = 0;
   ssize_t n;
-  while((n=Rio_readnb(&server_rio, response_buf, MAXBUF))>0){
-    Rio_writen(clientfd, response_buf, n);
-  }
+  Rio_readinitb(&server_rio, serverfd);
 
+  while ((n = Rio_readnb(&server_rio, response_buf, MAXBUF)) > 0) {
+    if (total_size + n <= MAX_OBJECT_SIZE)
+      memcpy(data_buf + total_size, response_buf, n);
+      total_size += n;
+      Rio_writen(clientfd, response_buf, n);
+    }
   Close(serverfd);
 
-
+  //캐시 저장
+  write_cache(uri, data_buf, total_size );
 }
 
 void read_requesthdrs(rio_t *rp, char *host_header, char *other_header){
@@ -163,6 +189,10 @@ void parse_uri(char *uri, char *hostname, char *port, char *path) {
       strncpy(hostname, hostbegin, hostlen);
       hostname[hostlen] = '\0';
       port[0] = '\0'; // 포트 없음
+  }
+
+  if (strlen(port) == 0) {
+    strcpy(port, "80");
   }
 }
 //format_http_header(&client_rio, path, host_header, other_header)
