@@ -199,8 +199,8 @@ CacheNode * cache_lookup(const char* uri, const int internal_lock, const int upd
         node=node->hnext;
 
     //3. 해시 체이닝
-    if(node && update_lru)
-        read_cache(node);
+    // if(node && update_lru)
+    //     read_cache(node);
 
     if(internal_lock)
         pthread_rwlock_unlock(&cache_list.lock);
