@@ -58,28 +58,7 @@ int find_cache(char *uri, char* data_buf, int *size_buf ){
 void read_cache(CacheNode *cache){
     //사용된 캐시를 LRU 리스트 맨 앞으로 이동하기
 
-    //이미 head면 아무것도 안함
-    if (cache==cache_list.head) return;
-
-
-    if(cache->prev) 
-        cache->prev->next= cache->next;
-
-    if(cache->next)
-        cache->next->prev=cache->prev;
-    else //캐시가 tail이었다면 
-        cache_list.tail=cache->prev;
-
-    //head 앞에 삽입    
-    cache->prev=NULL;
-    cache->next=cache_list.head;
-    if(cache_list.head)
-        cache_list.head->prev=cache;
-    cache_list.head=cache;
-
-    //tail 없는 경우 
-    if(cache_list.tail == NULL) 
-        cache_list.tail=cache;
+    cache->refer+=1;
 }
 
 //새 응답을 캐시에 저장함.
@@ -113,33 +92,36 @@ void write_cache(char *uri, const char* data, int size ){
     }
 
     //캐시에 공간이 충분할 때 까지 tail에서 제거
-    while(cache_list.total_size+size>cache_list.capacity){
-        CacheNode *old_tail = cache_list.tail;
-        
-        if(!old_tail) break; //캐시 비면 종료
-        
-        int hashed_index=hash_uri(old_tail->uri);
+    while (cache_list.total_size + size > cache_list.capacity) {
+        // LFU: 참조 횟수가 가장 작은 노드 탐색
+        CacheNode *victim = cache_list.head;
+        CacheNode *curr = cache_list.head;
+        while (curr) {
+            if (curr->refer < victim->refer)
+                victim = curr;
+            curr = curr->next;
+        }
+        if (!victim) break;
+    
+        // 해시 테이블에서 삭제
+        int hashed_index = hash_uri(victim->uri);
         CacheNode **indirect = &cache_list.table[hashed_index];
-
         while (*indirect) {
-            if (*indirect == old_tail) {
-                *indirect = old_tail->hnext;
+            if (*indirect == victim) {
+                *indirect = victim->hnext;
                 break;
             }
             indirect = &((*indirect)->hnext);
         }
-
-        if(old_tail->prev)
-            old_tail->prev->next=NULL;
-        cache_list.tail=old_tail->prev;
-
-        //노드가 하나뿐이었다면
-        if(cache_list.head==old_tail)
-            cache_list.head=NULL;
-
-        cache_list.total_size-=old_tail->size;
-        free(old_tail->data);
-        free(old_tail);
+        // LRU 리스트에서 삭제
+        if (victim->prev) victim->prev->next = victim->next;
+        if (victim->next) victim->next->prev = victim->prev;
+        if (cache_list.head == victim) cache_list.head = victim->next;
+        if (cache_list.tail == victim) cache_list.tail = victim->prev;
+    
+        cache_list.total_size -= victim->size;
+        free(victim->data);
+        free(victim);
     }
         
 
@@ -147,6 +129,7 @@ void write_cache(char *uri, const char* data, int size ){
 
     strncpy(newNode->uri, uri, MAXLINE-1);
     newNode->uri[MAXLINE-1]='\0';
+    newNode->refer=1;
 
     newNode->data=malloc(size);
     if(!newNode->data){
@@ -199,8 +182,9 @@ CacheNode * cache_lookup(const char* uri, const int internal_lock, const int upd
         node=node->hnext;
 
     //3. 해시 체이닝
-    if(node && update_lru)
+    if(node && update_lru){
         read_cache(node);
+    }
 
     if(internal_lock)
         pthread_rwlock_unlock(&cache_list.lock);

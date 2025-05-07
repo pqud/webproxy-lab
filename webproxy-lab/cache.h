@@ -16,6 +16,7 @@ typedef struct _CacheNode{
     char uri[MAXLINE]; //캐시 키
     char *data; //캐시 데이터 (웹 오브젝트)
     size_t size;
+    int refer;
     
     struct _CacheNode *next; //LRU의 next
     struct _CacheNode *prev; //LRU의 prev
