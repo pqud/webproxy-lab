@@ -13,15 +13,13 @@
 #define HASH_VAL 5381l // djb2 알고리즘 최적화 값
 
 typedef struct _CacheNode{
-    char uri[MAXLINE]; //캐시 키
-    char *data; //캐시 데이터 (웹 오브젝트)
+    char uri[MAXLINE];
+    char *data;
     size_t size;
-    
-    struct _CacheNode *next; //LRU의 next
-    struct _CacheNode *prev; //LRU의 prev
-    struct _CacheNode *hnext; //해시 버킷의 next (해시 충돌 대응 )
-    
+    int used; // NUR: 최근에 접근되었는지 표시
+    struct _CacheNode *next, *prev, *hnext;
 } CacheNode;
+
 
 typedef struct _CacheList{
     CacheNode *head; //가장 최근에 사용된 노드

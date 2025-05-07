@@ -56,30 +56,7 @@ int find_cache(char *uri, char* data_buf, int *size_buf ){
 
 
 void read_cache(CacheNode *cache){
-    //사용된 캐시를 LRU 리스트 맨 앞으로 이동하기
-
-    //이미 head면 아무것도 안함
-    if (cache==cache_list.head) return;
-
-
-    if(cache->prev) 
-        cache->prev->next= cache->next;
-
-    if(cache->next)
-        cache->next->prev=cache->prev;
-    else //캐시가 tail이었다면 
-        cache_list.tail=cache->prev;
-
-    //head 앞에 삽입    
-    cache->prev=NULL;
-    cache->next=cache_list.head;
-    if(cache_list.head)
-        cache_list.head->prev=cache;
-    cache_list.head=cache;
-
-    //tail 없는 경우 
-    if(cache_list.tail == NULL) 
-        cache_list.tail=cache;
+    cache->used = 1; // 최근에 사용됨 표시
 }
 
 //새 응답을 캐시에 저장함.
@@ -113,40 +90,60 @@ void write_cache(char *uri, const char* data, int size ){
     }
 
     //캐시에 공간이 충분할 때 까지 tail에서 제거
-    while(cache_list.total_size+size>cache_list.capacity){
-        CacheNode *old_tail = cache_list.tail;
-        
-        if(!old_tail) break; //캐시 비면 종료
-        
-        int hashed_index=hash_uri(old_tail->uri);
+    while (cache_list.total_size + size > cache_list.capacity) {
+        CacheNode *victim = NULL;
+        CacheNode *curr = cache_list.head;
+        // 1. used==0인 노드 탐색
+        while (curr) {
+            if (curr->used == 0) {
+                victim = curr;
+                break;
+            }
+            curr = curr->next;
+        }
+        // 2. 없으면 모든 노드 used=0으로 리셋 후 다시 탐색
+        if (!victim) {
+            curr = cache_list.head;
+            while (curr) {
+                curr->used = 0;
+                curr = curr->next;
+            }
+            // 다시 head부터 used==0인 노드 탐색
+            curr = cache_list.head;
+            while (curr) {
+                if (curr->used == 0) {
+                    victim = curr;
+                    break;
+                }
+                curr = curr->next;
+            }
+        }
+        if (!victim) break; // 캐시 비면 종료
+    
+        // victim 삭제 (기존 코드와 동일)
+        int hashed_index = hash_uri(victim->uri);
         CacheNode **indirect = &cache_list.table[hashed_index];
-
         while (*indirect) {
-            if (*indirect == old_tail) {
-                *indirect = old_tail->hnext;
+            if (*indirect == victim) {
+                *indirect = victim->hnext;
                 break;
             }
             indirect = &((*indirect)->hnext);
         }
-
-        if(old_tail->prev)
-            old_tail->prev->next=NULL;
-        cache_list.tail=old_tail->prev;
-
-        //노드가 하나뿐이었다면
-        if(cache_list.head==old_tail)
-            cache_list.head=NULL;
-
-        cache_list.total_size-=old_tail->size;
-        free(old_tail->data);
-        free(old_tail);
+        if (victim->prev) victim->prev->next = victim->next;
+        if (victim->next) victim->next->prev = victim->prev;
+        if (cache_list.head == victim) cache_list.head = victim->next;
+        if (cache_list.tail == victim) cache_list.tail = victim->prev;
+        cache_list.total_size -= victim->size;
+        free(victim->data);
+        free(victim);
     }
-        
 
     CacheNode* newNode=(CacheNode*)Malloc(sizeof(CacheNode));
 
     strncpy(newNode->uri, uri, MAXLINE-1);
     newNode->uri[MAXLINE-1]='\0';
+    newNode->used=1;
 
     newNode->data=malloc(size);
     if(!newNode->data){
