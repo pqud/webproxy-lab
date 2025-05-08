@@ -280,7 +280,8 @@ echo "*** Concurrency ***"
 tiny_port=$(free_port)
 echo "Starting tiny on port ${tiny_port}"
 cd ./tiny
-./tiny ${tiny_port} &> /dev/null &
+# ./tiny ${tiny_port} &> /dev/null &
+./tiny ${tiny_port} &
 tiny_pid=$!
 cd ${HOME_DIR}
 
@@ -290,7 +291,8 @@ wait_for_port_use "${tiny_port}"
 # Run the proxy
 proxy_port=$(free_port)
 echo "Starting proxy on port ${proxy_port}"
-./proxy ${proxy_port} &> /dev/null &
+# ./proxy ${proxy_port} &> /dev/null &
+./proxy ${proxy_port} &
 proxy_pid=$!
 
 # Wait for the proxy to start in earnest
@@ -299,7 +301,8 @@ wait_for_port_use "${proxy_port}"
 # Run a special blocking nop-server that never responds to requests
 nop_port=$(free_port)
 echo "Starting the blocking NOP server on port ${nop_port}"
-./nop-server.py ${nop_port} &> /dev/null &
+# ./nop-server.py ${nop_port} &> /dev/null &
+./nop-server.py ${nop_port} &
 nop_pid=$!
 
 # Wait for the nop server to start in earnest
@@ -350,7 +353,8 @@ echo "*** Cache ***"
 tiny_port=$(free_port)
 echo "Starting tiny on port ${tiny_port}"
 cd ./tiny
-./tiny ${tiny_port} &> /dev/null &
+# ./tiny ${tiny_port} &> /dev/null &
+./tiny ${tiny_port} &
 tiny_pid=$!
 cd ${HOME_DIR}
 
@@ -360,7 +364,8 @@ wait_for_port_use "${tiny_port}"
 # Run the proxy
 proxy_port=$(free_port)
 echo "Starting proxy on port ${proxy_port}"
-./proxy ${proxy_port} &> /dev/null &
+# ./proxy ${proxy_port} &> /dev/null &
+./proxy ${proxy_port} &
 proxy_pid=$!
 
 # Wait for the proxy to start in earnest
